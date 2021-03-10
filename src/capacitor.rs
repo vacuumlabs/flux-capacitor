@@ -113,6 +113,7 @@ impl Capacitor {
     }
 
     // TODO: Unfinished function to split anonymous ethereum logs into a Vec<&str> for further use
+
     pub fn process_anonymous_log(log: &String) -> Vec<&str> {
         // This will only be implemented for the specific functions that we need to parse for balancer to work properly
 
@@ -138,27 +139,31 @@ impl Capacitor {
             0
         };
 
-        // FIXME: This is most likely redundant now that we check this in the generic process log function
+        // FIXME: This if statement is most likely redundant now that we check this in the generic process log function
         let function_hash: &str = if log.len() > 65 {
-            &log.as_str()[2..66]
+            &log.as_str()[2..10] // Anonymous event function hashes are exactly 8 characters long
         } else {
             "No function hash"
         };
 
+        // TODO: This works for handleRebind(), still have to check it for other anonymous functions
+        let start_of_log_data = &log.as_str()[10..].find(function_hash).unwrap_or(usize::MAX); // FIXME: This should probably just panic, or be handled in some reasonable way
         let mut args: Vec<&str> = Vec::new();
-        for i in 1..=num_topics {
-            let f = 66 + (i as i32 - 1) * 64;
-            let t = 66 + i as i32 * 64;
+
+        for i in 1..log.as_str()[*start_of_log_data+10 as usize..].len()/64 {
+            let h =  (i - 1) * 64 + start_of_log_data + 18;
+            let t = i  * 64 + start_of_log_data + 18 ;
 
             if log.len() < t as usize {
-                args.push("Missing arg");
-                continue;
+                // This should mean we encountered the final line of the logs
+                break;
             }
 
-            args.push(&log.as_str()[f as usize..t as usize]);
-        }
+            args.push(&log.as_str()[h as usize..t as usize].trim_start_matches('0'));
 
-        let mut processed_log = vec!(function_hash, &log.as_str()[..2]);
+        };
+
+        let mut processed_log = vec!(function_hash, &log.as_str()[..2]); // appending the number of topics is pointless, but it allows for data to be consistently formatted.
         processed_log.append(&mut args);
 
         processed_log
