@@ -31,7 +31,8 @@ pub enum DBAction {
 pub struct DBMetadata {
     pub table: String,
     pub action: DBAction,
-    pub primary_key: String
+    pub primary_key: String,
+    pub pk_col: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]
